@@ -88,9 +88,36 @@ export default function ReviewGatingPage() {
 
   // Handle copy reward code
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(CONFIG.REWARD_CODE);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // Try modern Clipboard API first, fallback to older method for iframe compatibility
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(CONFIG.REWARD_CODE).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(() => {
+        // Fallback if clipboard fails
+        fallbackCopy(CONFIG.REWARD_CODE);
+      });
+    } else {
+      fallbackCopy(CONFIG.REWARD_CODE);
+    }
+  };
+
+  // Fallback copy method using text selection
+  const fallbackCopy = (text: string) => {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+    }
+    document.body.removeChild(textarea);
   };
 
   // ==================== RENDER: INITIAL SCREEN ====================
