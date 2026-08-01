@@ -37,20 +37,31 @@ export default function ReviewGatingPage() {
 
   // Load config from URL params on mount
   useEffect(() => {
-    const businessName = searchParams.get('businessName') || DEFAULT_CONFIG.BUSINESS_NAME;
-    const logoUrl = searchParams.get('logoUrl') || DEFAULT_CONFIG.LOGO_URL;
-    const googleReviewUrl = searchParams.get('googleReviewUrl') || DEFAULT_CONFIG.GOOGLE_REVIEW_URL;
-    const rewardCode = searchParams.get('rewardCode') || DEFAULT_CONFIG.REWARD_CODE;
-    const rewardText = searchParams.get('rewardText') || DEFAULT_CONFIG.REWARD_TEXT;
-    const rewardExpiry = searchParams.get('rewardExpiry') || DEFAULT_CONFIG.REWARD_EXPIRY;
+    // Helper function to safely decode URI component
+    const safeDecodeURIComponent = (value: string | null, defaultValue: string): string => {
+      if (!value) return defaultValue;
+      try {
+        return decodeURIComponent(value);
+      } catch (error) {
+        console.warn('[v0] Failed to decode URI component:', error);
+        return defaultValue;
+      }
+    };
+
+    const businessName = searchParams.get('businessName');
+    const logoUrl = searchParams.get('logoUrl');
+    const googleReviewUrl = searchParams.get('googleReviewUrl');
+    const rewardCode = searchParams.get('rewardCode');
+    const rewardText = searchParams.get('rewardText');
+    const rewardExpiry = searchParams.get('rewardExpiry');
 
     setConfig({
-      BUSINESS_NAME: decodeURIComponent(businessName),
-      LOGO_URL: decodeURIComponent(logoUrl),
-      GOOGLE_REVIEW_URL: decodeURIComponent(googleReviewUrl),
-      REWARD_CODE: decodeURIComponent(rewardCode),
-      REWARD_TEXT: decodeURIComponent(rewardText),
-      REWARD_EXPIRY: decodeURIComponent(rewardExpiry),
+      BUSINESS_NAME: safeDecodeURIComponent(businessName, DEFAULT_CONFIG.BUSINESS_NAME),
+      LOGO_URL: safeDecodeURIComponent(logoUrl, DEFAULT_CONFIG.LOGO_URL),
+      GOOGLE_REVIEW_URL: safeDecodeURIComponent(googleReviewUrl, DEFAULT_CONFIG.GOOGLE_REVIEW_URL),
+      REWARD_CODE: safeDecodeURIComponent(rewardCode, DEFAULT_CONFIG.REWARD_CODE),
+      REWARD_TEXT: safeDecodeURIComponent(rewardText, DEFAULT_CONFIG.REWARD_TEXT),
+      REWARD_EXPIRY: safeDecodeURIComponent(rewardExpiry, DEFAULT_CONFIG.REWARD_EXPIRY),
     });
   }, [searchParams]);
 
