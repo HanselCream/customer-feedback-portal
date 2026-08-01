@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
-// ==================== CONFIG ====================
-// Easily customize the review gating experience here
-const CONFIG = {
+// ==================== DEFAULT CONFIG ====================
+// Override these with URL parameters: ?businessName=My%20Store&logoUrl=https://...&googleReviewUrl=https://...
+const DEFAULT_CONFIG = {
   BUSINESS_NAME: 'Your Business',
   LOGO_URL: 'https://via.placeholder.com/80',
   GOOGLE_REVIEW_URL: 'https://google.com/maps/place/your-business',
@@ -19,6 +20,8 @@ type Screen = 'initial' | 'positive' | 'positive-reward' | 'negative' | 'negativ
 
 // ==================== MAIN COMPONENT ====================
 export default function ReviewGatingPage() {
+  const searchParams = useSearchParams();
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [screen, setScreen] = useState<Screen>('initial');
   const [suggestion, setSuggestion] = useState('');
   const [generatingReview, setGeneratingReview] = useState(false);
@@ -32,6 +35,36 @@ export default function ReviewGatingPage() {
   const [copied, setCopied] = useState(false);
   const [negativeRewardVisible, setNegativeRewardVisible] = useState(false);
 
+  // Load config from URL params on mount
+  useEffect(() => {
+    // Helper function to safely decode URI component
+    const safeDecodeURIComponent = (value: string | null, defaultValue: string): string => {
+      if (!value) return defaultValue;
+      try {
+        return decodeURIComponent(value);
+      } catch (error) {
+        console.warn('[v0] Failed to decode URI component:', error);
+        return defaultValue;
+      }
+    };
+
+    const businessName = searchParams.get('businessName');
+    const logoUrl = searchParams.get('logoUrl');
+    const googleReviewUrl = searchParams.get('googleReviewUrl');
+    const rewardCode = searchParams.get('rewardCode');
+    const rewardText = searchParams.get('rewardText');
+    const rewardExpiry = searchParams.get('rewardExpiry');
+
+    setConfig({
+      BUSINESS_NAME: safeDecodeURIComponent(businessName, DEFAULT_CONFIG.BUSINESS_NAME),
+      LOGO_URL: safeDecodeURIComponent(logoUrl, DEFAULT_CONFIG.LOGO_URL),
+      GOOGLE_REVIEW_URL: safeDecodeURIComponent(googleReviewUrl, DEFAULT_CONFIG.GOOGLE_REVIEW_URL),
+      REWARD_CODE: safeDecodeURIComponent(rewardCode, DEFAULT_CONFIG.REWARD_CODE),
+      REWARD_TEXT: safeDecodeURIComponent(rewardText, DEFAULT_CONFIG.REWARD_TEXT),
+      REWARD_EXPIRY: safeDecodeURIComponent(rewardExpiry, DEFAULT_CONFIG.REWARD_EXPIRY),
+    });
+  }, [searchParams]);
+
   // Handle generating review suggestion
   const handleGenerateSuggestion = async () => {
     setGeneratingReview(true);
@@ -39,7 +72,7 @@ export default function ReviewGatingPage() {
       const response = await fetch('/api/suggest-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName: CONFIG.BUSINESS_NAME }),
+        body: JSON.stringify({ businessName: config.BUSINESS_NAME }),
       });
       const data = await response.json();
       setSuggestion(data.suggestion || 'Great service and friendly staff!');
@@ -53,7 +86,7 @@ export default function ReviewGatingPage() {
 
   // Handle leaving Google Review (open in new tab)
   const handleLeaveReview = () => {
-    window.open(CONFIG.GOOGLE_REVIEW_URL, '_blank');
+    window.open(config.GOOGLE_REVIEW_URL, '_blank');
     // Show reward after a brief delay (user may return to tab)
     setTimeout(() => {
       setScreen('positive-reward');
@@ -90,15 +123,15 @@ export default function ReviewGatingPage() {
   const handleCopyCode = () => {
     // Try modern Clipboard API first, fallback to older method for iframe compatibility
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(CONFIG.REWARD_CODE).then(() => {
+      navigator.clipboard.writeText(config.REWARD_CODE).then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }).catch(() => {
         // Fallback if clipboard fails
-        fallbackCopy(CONFIG.REWARD_CODE);
+        fallbackCopy(config.REWARD_CODE);
       });
     } else {
-      fallbackCopy(CONFIG.REWARD_CODE);
+      fallbackCopy(config.REWARD_CODE);
     }
   };
 
@@ -127,9 +160,10 @@ export default function ReviewGatingPage() {
         <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg">
           {/* Logo */}
           <div className="mb-6 flex justify-center">
-            <img
-              src={CONFIG.LOGO_URL}
-              alt={CONFIG.BUSINESS_NAME}
+        <img
+          className="mb-6 h-20 w-20 rounded-full object-cover shadow-md"
+          src={config.LOGO_URL}
+          alt={config.BUSINESS_NAME}
               className="h-20 w-20 rounded-full object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).src =
@@ -140,7 +174,7 @@ export default function ReviewGatingPage() {
 
           {/* Heading */}
           <h1 className="mb-2 text-center text-2xl font-bold text-gray-900">
-            How was your experience with {CONFIG.BUSINESS_NAME}?
+            How was your experience with {config.BUSINESS_NAME}?
           </h1>
           <p className="mb-8 text-center text-gray-600">Your feedback helps us improve</p>
 
@@ -238,13 +272,13 @@ export default function ReviewGatingPage() {
             <div className="text-center">
               <p className="mb-3 text-sm font-medium text-gray-600">Your exclusive code:</p>
               <p className="mb-4 font-mono text-3xl font-bold text-amber-600">
-                {CONFIG.REWARD_CODE}
+                {config.REWARD_CODE}
               </p>
               <p className="mb-4 text-sm text-gray-700">
-                Show this at checkout for {CONFIG.REWARD_TEXT}
+                Show this at checkout for {config.REWARD_TEXT}
               </p>
               <p className="text-xs text-gray-500">
-                Valid for the next {CONFIG.REWARD_EXPIRY}
+                Valid for the next {config.REWARD_EXPIRY}
               </p>
             </div>
           </div>
@@ -379,11 +413,11 @@ export default function ReviewGatingPage() {
             <div className="text-center">
               <p className="mb-3 text-sm font-medium text-gray-600">Here&apos;s a little something:</p>
               <p className="mb-4 font-mono text-3xl font-bold text-gray-600">
-                {CONFIG.REWARD_CODE}
+                {config.REWARD_CODE}
               </p>
               <p className="mb-4 text-sm text-gray-700">5% off your next visit</p>
               <p className="text-xs text-gray-500">
-                Valid for the next {CONFIG.REWARD_EXPIRY}
+                Valid for the next {config.REWARD_EXPIRY}
               </p>
             </div>
           </div>
